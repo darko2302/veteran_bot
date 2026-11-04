@@ -55,7 +55,7 @@ DELETION_TASKS: set[asyncio.Task[None]] = set()
 
 CATEGORIES: dict[str, dict] = {
     "payments": {
-        "name": "Виплати і грошове забезпечення",
+        "name": "Соціальний захист, пільги",
         "operator_chat_id": -1004405097726,
         "admin_topic_id": 45,
     },
