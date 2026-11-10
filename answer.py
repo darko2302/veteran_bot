@@ -55,7 +55,7 @@ DELETION_TASKS: set[asyncio.Task[None]] = set()
 
 CATEGORIES: dict[str, dict] = {
     "payments": {
-        "name": "Соціальний захист, пільги",  # <--- ИЗМЕНЕНО ЗДЕСЬ
+        "name": "Соціальний захист, пільги",
         "operator_chat_id": -1004405097726,
         "admin_topic_id": 45,
     },
@@ -80,7 +80,7 @@ CATEGORIES: dict[str, dict] = {
         "admin_topic_id": 23,
     },
     "families": {
-        "name": "Питання родин загиблих",  # <--- ИЗМЕНЕНО ЗДЕСЬ (убрано "полонених")
+        "name": "Питання родин загиблих",
         "operator_chat_id": -1003901287143,
         "admin_topic_id": 25,
     },
@@ -473,8 +473,15 @@ async def edit_appeal_text(callback: CallbackQuery, state: FSMContext) -> None:
 async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
     if callback.message is None:
         return
-    if await state.get_state() != AppealState.reviewing.state:
+        
+    # --- ЗАЩИТА ОТ СПАМА ---
+    current_state = await state.get_state()
+    if current_state != AppealState.reviewing.state:
+        await callback.answer("Звернення вже надсилається або обробляється.", show_alert=True)
         return
+    
+    # Мгновенно сбрасываем состояние, чтобы избежать дублирования
+    await state.set_state(None)
 
     data = await state.get_data()
     user = callback.from_user
@@ -504,15 +511,16 @@ async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
     appeal_id = await db.create_appeal(user.id, category_key, callback.message.message_id)
     await db.register_private_message(user.id, callback.message.message_id, appeal_id)
     
-    # Убрали текст пользователя из header, чтобы не было дублирования
+    # --- ИСПРАВЛЕНО: Текст пользователя ВОЗВРАЩЕН в шапку (header) ---
+    # Больше нет вызова append_message_to_group_cards для первого сообщения, чтобы не дублировать
     header = (
         f"💬 <b>Повідомлення до звернення #{appeal_id}</b>\n"
         f"📂 <b>Категорія:</b> {escape(CATEGORIES[category_key]['name'])}\n"
         f"👤 <b>Від кого:</b> {escape(user_label)}\n"
         f"🆔 <b>ID користувача:</b> {user.id}\n"
+        f"\n<b>Користувач — {escape(user_label)}:</b>\n"
+        f"{escape(data['appeal_text'])}"
     )
-    
-    await append_message_to_group_cards(callback.bot, appeal_id, "Користувач", user.id, user_label, data["appeal_text"])
     
     blocked = await db.is_user_blocked(user.id)
     errors = []
