@@ -55,7 +55,7 @@ DELETION_TASKS: set[asyncio.Task[None]] = set()
 
 CATEGORIES: dict[str, dict] = {
     "payments": {
-        "name": "Соціальний захист, пільги",
+        "name": "Соціальний захист, пільги",  # <--- ИЗМЕНЕНО ЗДЕСЬ
         "operator_chat_id": -1004405097726,
         "admin_topic_id": 45,
     },
@@ -80,7 +80,7 @@ CATEGORIES: dict[str, dict] = {
         "admin_topic_id": 23,
     },
     "families": {
-        "name": "Питання родин загиблих, полонених",
+        "name": "Питання родин загиблих",  # <--- ИЗМЕНЕНО ЗДЕСЬ (убрано "полонених")
         "operator_chat_id": -1003901287143,
         "admin_topic_id": 25,
     },
@@ -504,13 +504,12 @@ async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
     appeal_id = await db.create_appeal(user.id, category_key, callback.message.message_id)
     await db.register_private_message(user.id, callback.message.message_id, appeal_id)
     
+    # Убрали текст пользователя из header, чтобы не было дублирования
     header = (
         f"💬 <b>Повідомлення до звернення #{appeal_id}</b>\n"
         f"📂 <b>Категорія:</b> {escape(CATEGORIES[category_key]['name'])}\n"
         f"👤 <b>Від кого:</b> {escape(user_label)}\n"
         f"🆔 <b>ID користувача:</b> {user.id}\n"
-        f"\n<b>Користувач — {escape(user_label)}:</b>\n"
-        f"{escape(data['appeal_text'])}"
     )
     
     await append_message_to_group_cards(callback.bot, appeal_id, "Користувач", user.id, user_label, data["appeal_text"])
