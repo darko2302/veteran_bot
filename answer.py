@@ -511,15 +511,15 @@ async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
     appeal_id = await db.create_appeal(user.id, category_key, callback.message.message_id)
     await db.register_private_message(user.id, callback.message.message_id, appeal_id)
     
-    # --- ИСПРАВЛЕНО: Текст пользователя ВОЗВРАЩЕН в шапку (header) ---
-    # Больше нет вызова append_message_to_group_cards для первого сообщения, чтобы не дублировать
+    # 1. Сначала записываем сообщение в историю базы, чтобы оно было в карточке ЛС
+    await append_message_to_group_cards(callback.bot, appeal_id, "Користувач", user.id, user_label, data["appeal_text"])
+    
+    # 2. Формируем шапку БЕЗ текста пользователя (чтобы не дублировать в группе)
     header = (
         f"💬 <b>Повідомлення до звернення #{appeal_id}</b>\n"
         f"📂 <b>Категорія:</b> {escape(CATEGORIES[category_key]['name'])}\n"
         f"👤 <b>Від кого:</b> {escape(user_label)}\n"
         f"🆔 <b>ID користувача:</b> {user.id}\n"
-        f"\n<b>Користувач — {escape(user_label)}:</b>\n"
-        f"{escape(data['appeal_text'])}"
     )
     
     blocked = await db.is_user_blocked(user.id)
