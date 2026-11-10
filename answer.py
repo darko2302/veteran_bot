@@ -511,10 +511,7 @@ async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
     appeal_id = await db.create_appeal(user.id, category_key, callback.message.message_id)
     await db.register_private_message(user.id, callback.message.message_id, appeal_id)
     
-    # 1. Сначала записываем сообщение в историю базы, чтобы оно было в карточке ЛС
-    await append_message_to_group_cards(callback.bot, appeal_id, "Користувач", user.id, user_label, data["appeal_text"])
-    
-    # 2. Формируем шапку БЕЗ текста пользователя (чтобы не дублировать в группе)
+    # 1. Формируем шапку БЕЗ текста (пока без него)
     header = (
         f"💬 <b>Повідомлення до звернення #{appeal_id}</b>\n"
         f"📂 <b>Категорія:</b> {escape(CATEGORIES[category_key]['name'])}\n"
@@ -524,6 +521,8 @@ async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
     
     blocked = await db.is_user_blocked(user.id)
     errors = []
+    
+    # 2. Отправляем шапку в группы и сохраняем ID карточки
     for chat_id, thread_id in destinations:
         try:
             reply_markup = get_operator_case_keyboard(appeal_id, blocked)
@@ -536,7 +535,11 @@ async def submit_appeal(callback: CallbackQuery, state: FSMContext) -> None:
             await db.register_group_card(chat_id, appeal_id, header_message.message_id, header)
         except TelegramAPIError:
             errors.append(str(chat_id))
+            
+    # 3. ТЕПЕРЬ добавляем текст пользователя в историю (карточки уже созданы в БД)
+    await append_message_to_group_cards(callback.bot, appeal_id, "Користувач", user.id, user_label, data["appeal_text"])
     
+    # 4. Обновляем карточку в ЛС пользователя
     await update_private_card(callback.bot, appeal_id, user.id, callback.message.message_id)
 
     cleanup_message_ids = {*data.get("form_cleanup_message_ids", []), *data.get("form_input_message_ids", [])}
