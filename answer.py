@@ -80,7 +80,7 @@ CATEGORIES: dict[str, dict] = {
         "admin_topic_id": 23,
     },
     "families": {
-        "name": "Питання родин загиблих",
+        "name": "Питання родин",
         "operator_chat_id": -1003901287143,
         "admin_topic_id": 25,
     },
